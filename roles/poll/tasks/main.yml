@@ -1,0 +1,33 @@
+---
+- name: unarchive poll.tar
+  become: true
+  unarchive:
+    src: ../../../poll.tar
+    dest: /opt/
+
+- name: upload .service
+  become: true
+  register: service
+  template:
+    src: ../files/poll.service
+    dest: /etc/systemd/system/
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Ignore PEP 668 because NO >:(
+  ansible.builtin.file:
+      path: /usr/lib/python3.11/EXTERNALLY-MANAGED
+      state: absent
+
+- name: Install dependance
+  pip:
+    requirements: /opt/poll/requirements.txt
+
+- name: start service
+  when: service.changed
+  become: true
+  systemd:
+    name: poll
+    state: restarted
+    enabled: yes

@@ -1,0 +1,15 @@
+redis_host : 192.168.1.30
+redis_dir: /etc/redis
+redis_bind: 0.0.0.0
+redis_port: 6379
+
+postgresql_host: 192.168.1.29
+postgresql_port: 5432
+postgresql_db: paul
+postgresql_user: paul
+postgresql_pass: democracyIsFragile
+
+result_port: 8080
+
+ansible_become_password: debian
+ssh_pass: debian

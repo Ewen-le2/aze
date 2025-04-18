@@ -1,0 +1,62 @@
+- name: Add PostgreSQL 16 GPG key
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+- name: Add PostgreSQL 16 repo
+  become: true
+  apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main"
+    state: present
+
+- name: Install PostgreSQL 16
+  become: true
+  apt:
+    name:
+      - postgresql-16
+      - postgresql-client-16
+      - python3-psycopg2
+    state: present
+
+- name: Start service
+  systemd:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Upload pg_hba.conf
+  copy:
+    src: ../files/pg_hba.conf
+    dest: /etc/postgresql/16/main/pg_hba.conf
+  register: pg_hba_conf
+
+- name: Upload postgresql.conf
+  copy:
+    src: ../files/postgresql.conf
+    dest: /etc/postgresql/16/main/postgresql.conf
+  register: postgresql_conf
+
+- name: Restart PostgreSQL if configuration changed
+  systemd:
+    name: postgresql
+    state: restarted
+    enabled: true
+    daemon_reload: true
+  when: pg_hba_conf.changed or postgresql_conf.changed
+
+- name: Create database
+  postgresql_db:
+    name: "{{ postgresql_db }}"
+    state: present
+
+- name: Create user
+  postgresql_user:
+    db: "{{ postgresql_db }}"
+    name: "{{ postgresql_user }}"
+    password: "{{ postgresql_pass }}"
+    state: present
+
+- name: Upload database scheme
+  copy:
+    src: ../files/schema.sql
+    dest: /tmp/schema.sql
