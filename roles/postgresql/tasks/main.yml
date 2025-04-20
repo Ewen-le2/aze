@@ -1,4 +1,5 @@
 - name: Add PostgreSQL 16 GPG key
+  become: true
   apt_key:
     url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
     state: present
@@ -17,6 +18,7 @@
       - postgresql-client-16
       - python3-psycopg2
     state: present
+    update_cache: yes
 
 - name: Start service
   systemd:
@@ -25,38 +27,73 @@
     enabled: true
 
 - name: Upload pg_hba.conf
-  copy:
+  template:
     src: ../files/pg_hba.conf
     dest: /etc/postgresql/16/main/pg_hba.conf
   register: pg_hba_conf
 
 - name: Upload postgresql.conf
-  copy:
+  template:
     src: ../files/postgresql.conf
     dest: /etc/postgresql/16/main/postgresql.conf
   register: postgresql_conf
+
+- name: Upload schema.sql
+  copy:
+    src: ../files/schema.sql
+    dest: /etc/postgresql/16/main/schema.sql
+  register: schema_sql
 
 - name: Restart PostgreSQL if configuration changed
   systemd:
     name: postgresql
     state: restarted
     enabled: true
-    daemon_reload: true
+    daemon_reload: yes
   when: pg_hba_conf.changed or postgresql_conf.changed
 
-- name: Create database
-  postgresql_db:
-    name: "{{ postgresql_db }}"
-    state: present
+- name: Check if PostgreSQL is running
+  command: systemctl status postgresql
+  register: pg_status
+  failed_when: false
+  changed_when: false
 
-- name: Create user
-  postgresql_user:
-    db: "{{ postgresql_db }}"
-    name: "{{ postgresql_user }}"
-    password: "{{ postgresql_pass }}"
-    state: present
+- name: Ensure PostgreSQL service is running
+  systemd:
+    name: postgresql
+    state: started
+    enabled: true
+  register: pg_started
 
-- name: Upload database scheme
-  copy:
-    src: ../files/schema.sql
-    dest: /tmp/schema.sql
+- name: Wait for PostgreSQL to be ready
+  wait_for:
+    port: "{{ postgresql_port }}"
+    timeout: 30
+  when: pg_started.changed
+
+- name: Create app database
+  become: yes
+  shell: su - postgres -c "psql -c \"CREATE DATABASE {{ postgresql_db }} OWNER {{ postgresql_user }} || true;\""
+  register: create_db
+  failed_when: false
+  changed_when: create_db.rc == 0
+
+- name: Create db user
+  become: yes
+  shell: su - postgres -c "psql -c \"CREATE USER {{ postgresql_user }} WITH PASSWORD '{{ postgresql_pass }}' || true;\""
+  register: create_user
+  failed_when: false
+  changed_when: create_user.rc == 0
+
+- name: Grant db user access to app db
+  become: yes
+  shell: su - postgres -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE {{ postgresql_db }} TO {{ postgresql_user }} || true;\""
+  register: grant_privs
+  failed_when: false
+  changed_when: grant_privs.rc == 0
+
+- name: Apply schema.sql
+  become: yes
+  shell: su - postgres -c "psql {{ postgresql_db }} -f /etc/postgresql/16/main/schema.sql"
+  register: schema_result
+  failed_when: false

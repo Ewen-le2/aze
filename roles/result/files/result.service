@@ -1,6 +1,7 @@
 [Unit]
 Description=Result Service
 After=network.target
+Wants=postgresql.service
 
 [Service]
 User=root
@@ -14,5 +15,6 @@ WorkingDirectory=/opt/result
 ExecStart=/usr/bin/node /opt/result/server.js
 Restart=always
 RestartSec=10
+
 [Install]
 WantedBy=multi-user.target

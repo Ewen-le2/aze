@@ -1,17 +1,18 @@
-
 - name: Role base
   hosts: all
+  become: true
   roles:
     - base
 
 - name: Role Redis
   hosts: redis
+  become: true
   vars_files:
     - group_vars/all.yml
   roles:
     - redis
 
-- name: Role PostrgreSQL
+- name: Role PostgreSQL
   hosts: postgres
   become: true
   vars_files:

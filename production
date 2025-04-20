@@ -5,7 +5,7 @@ redis1 ansible_host=192.168.1.30 ansible_user=debian
 postgres1 ansible_host=192.168.1.29 ansible_user=debian
 
 [poll]
-poll1 ansible_host=192.168.1.38 ansible_user=debian
+poll1 ansible_host=192.168.1.28 ansible_user=debian
 
 [worker]
 worker1 ansible_host=192.168.1.27 ansible_user=debian

@@ -26,18 +26,7 @@
 
 - name: Install dependance
   npm:
-    path: /opt/result/package.json
-
-- name: Set environment variable
-  lineinfile:
-    path: /etc/environment
-    line: "POSTGRES_USER={{ postgresql_user }}"
-    line: "POSTGRES_PASSWORD={{ postgresql_pass }}"
-    line: "POSTGRES_HOST={{ postgresql_host }}"
-    line: "POSTGRES_PORT={{ postgresql_port }}"
-    line: "POSTGRES_DB={{ postgresql_db }}"
-    create: yes
-    state: present
+    path: /opt/result/
 
 - name: Start service
   become: true
